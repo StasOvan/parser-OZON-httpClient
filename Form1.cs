@@ -30,6 +30,7 @@ namespace parser_OZON_webview
         int flagSTATUS;
         List<string> articles;
         List<Item> items = new List<Item>();
+        private static readonly HttpClient httpClient = new HttpClient();
 
 
         public Form1()
@@ -47,19 +48,18 @@ namespace parser_OZON_webview
             timer1.Enabled = false;
         }
 
-        private void OnTimedEvent(Object source, ElapsedEventArgs e)
-        {
-            StartParser(); // Вызов вашей функции parser
-        }
 
-        private void StartParser()
+        private async void StartParser()
         {
             flagSTATUS = 1;
             dataGridView1.Rows.Clear();
             articles = [];
             items = [];
-            if (InvokeRequired) this.Invoke(new Action(() => btnStartParse.Enabled = false)); else btnStartParse.Enabled = false;
-            if (InvokeRequired) this.Invoke(new Action(() => groupBox1.Text = "История действий")); else groupBox1.Text = "История действий";
+            //if (InvokeRequired) this.Invoke(new Action(() => btnStartParse.Enabled = false)); else btnStartParse.Enabled = false;
+            //if (InvokeRequired) this.Invoke(new Action(() => groupBox1.Text = "История действий")); else groupBox1.Text = "История действий";
+            btnStartParse.Enabled = false;
+            groupBox1.Text = "История действий";
+
 
             AddHistoryText("Инициализация запроса ..");
             AddHistoryText("Выполнение запроса ..");
@@ -76,20 +76,33 @@ namespace parser_OZON_webview
             for (var i = 0; i < articles.Count; i++)
             {
                 Item item = new Item();
+
                 if (articles[i] != "")
                 {
-                    List<string> prices = GetPrices(articles[i]);
+                    flagSTATUS = 1;
+                    List<string> prices = await GetPrices(articles[i]);
+                    if (flagSTATUS == -1)
+                    {
+                        Application.DoEvents();
+                        dataGridView1.Rows.Add(i + 1, "Такой страницы не существует");
+                        continue;
+                    }
+
                     if (prices != null)
                     {
                         item.Article = articles[i];
                         item.Price_card = prices[0];
                         item.Price = prices[1];
                         item.Price_old = prices[2];
+                        item.Article_found = "true";
                     }
                     else
                     {
                         item.Article = articles[i];
-                        item.Error = "not found";
+                        item.Price_card = "";
+                        item.Price = "";
+                        item.Price_old = "";
+                        item.Article_found = "false";
                     }
                 }
 
@@ -97,13 +110,13 @@ namespace parser_OZON_webview
                 Application.DoEvents();
 
                 groupBox2.Text = $"Результат парсинга ({i + 1} из {articles.Count}):";
-                if (items[i].Error == null)
-                    if (articles[i] != "")
-                        dataGridView1.Rows.Add(i, articles[i], items[i].Price_card, items[i].Price, items[i].Price_old);
+                if (articles[i] != "")
+                    if (items[i].Article_found == "true")
+                        dataGridView1.Rows.Add(i + 1, articles[i], items[i].Price_card, items[i].Price, items[i].Price_old);
                     else
-                        dataGridView1.Rows.Add(i, "нет артикула");
+                        dataGridView1.Rows.Add(i + 1, articles[i], "нет цен");
                 else
-                    dataGridView1.Rows.Add(i, articles[i], items[i].Error);
+                    dataGridView1.Rows.Add(i + 1, "нет артикула");
 
                 //if (i == 10) break;
 
@@ -149,15 +162,35 @@ namespace parser_OZON_webview
 
 
 
-        private List<string> GetPrices(string article)
+        private async Task<List<string>> GetPrices(string article)
         {
-            //article = "555567484";
+            article = "1746727978";
             var url = $"{URL_OZON}{article}"; // URL товара
-            var httpClient = new HttpClient();
-            var response = httpClient.GetStringAsync(url).Result;
+            //var httpClient = new HttpClient();
+            //string response = "";
+            //try
+            //{
+            //    response = await httpClient.GetStringAsync(url);
+            //}
+            //catch
+            //{
+            //    flagSTATUS = -1;
+            //}
+            httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36");
+            httpClient.DefaultRequestHeaders.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8");
+            httpClient.DefaultRequestHeaders.Add("Accept-Language", "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7");
+            httpClient.DefaultRequestHeaders.Add("Accept-Encoding", "gzip, deflate, br");
+            httpClient.DefaultRequestHeaders.Add("Connection", "keep-alive");
+
+            var cookies = "__Secure-ETC=5f7254d476bad14654f34a9db4926b84; abt_data=7.PiM4AFbZG4NUzgayVZ06Drd9UajRWBJ0b-JCjj1WtQ_aHR3HMoDE_f_P8NF0JfkSuYClNCRjqHh90Qwi43s_OVApILmfiSZ77BSNUm79FJd_ytntS-xgBTxRqgDckfhzQBWQ2Piq0X5ZEe-cgl-BGfjdO5IpqC6T4voIC4ezuwcPonM9U7vhcSm_AEXKQmfoW6LePe0mJjzBcVTe1PjAs1u67UWiuvhKTgQTYHKTWqtwZWIy3x982CsN7oNnW1iQvDCmJjMC9Hi3dBmlrcvQCl46h_NERkOW4q71aIvGcUTYfR-txnqaZ14iUtiSJkTtIerI8UAZPJxeKtjcjwssXYZ2JGTUcxOsjLVA4MWuQk7qe8PqIJVUDnUfBXbwQA"; // Замените на ваши куки
+            httpClient.DefaultRequestHeaders.Add("Cookie", cookies);
+
+            var r = await httpClient.GetAsync(url);
+            var response = await r.Content.ReadAsStringAsync();
             List<string> values = [];
 
             var htmlDocument = new HtmlAgilityPack.HtmlDocument();
+            // !!!!!!!!!!!!!!!!htmlDocument.LoadHtml(response);
             htmlDocument.LoadHtml(response);
 
             // Находим элемент <div data-widget="webPrice">
@@ -206,7 +239,6 @@ namespace parser_OZON_webview
             {
                 flagSTATUS = -1;
                 return null;
-
             }
 
         }
@@ -238,39 +270,33 @@ namespace parser_OZON_webview
 
         private void LoadArticles()
         {
-            using (HttpClient client = new HttpClient())
+            try
             {
-                try
-                {
-                    var response = client.GetStringAsync(URL_XML).Result;
-                    XDocument xdoc = XDocument.Parse(response);
+                var response = httpClient.GetStringAsync(URL_XML).Result;
+                XDocument xdoc = XDocument.Parse(response);
 
-                    foreach (var offerElement in xdoc.Descendants("offer"))
-                    {
-                        var articleOzon = offerElement.Element("article_ozon")?.Value;
-                        if (articleOzon != null) articles.Add(articleOzon);
-                    }
-                }
-                catch (Exception ex)
+                foreach (var offerElement in xdoc.Descendants("offer"))
                 {
-                    AddHistoryText($"Ошибка загрузки данных: {ex.Message}");
-                    flagSTATUS = 0;
+                    var articleOzon = offerElement.Element("article_ozon")?.Value;
+                    if (articleOzon != null) articles.Add(articleOzon);
                 }
             }
+            catch (Exception ex)
+            {
+                AddHistoryText($"Ошибка загрузки данных: {ex.Message}");
+                flagSTATUS = 0;
+            }
+
         }
-
-
 
         private void PostJsonToEndPoint() // работает с скписком items
         {
-
             // URL для отправки данных
             string url = URL_ENDPOINT;
 
             // Отправка POST-запроса
             using (HttpClient client = new HttpClient())
             {
-
                 // Преобразование словаря в JSON
                 string json = JsonSerializer.Serialize(items);
 
@@ -298,8 +324,8 @@ namespace parser_OZON_webview
         private void btnStartParse_Click(object sender, EventArgs e)
         {
             StartParser();
-            timer1.Start();
             timer1.Enabled = true;
+            timer1.Start();
         }
 
         public void AddHistoryText(string text)
@@ -351,6 +377,11 @@ namespace parser_OZON_webview
                                            MessageBoxIcon.Question);
             if (result == DialogResult.No)
                 e.Cancel = true;
+        }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            webView21.CoreWebView2.Navigate("https://www.ozon.ru/product/1746727978");
         }
     }
 }
