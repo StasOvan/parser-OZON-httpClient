@@ -107,12 +107,13 @@ namespace parser_OZON_webview
                 }
 
                 items.Add(item);
-                Application.DoEvents();
+                //Application.DoEvents();
 
                 groupBox2.Text = $"Результат парсинга ({i + 1} из {articles.Count}):";
+                Debug.WriteLine(i);
                 if (articles[i] != "")
-                    if (items[i].Article_found == "true")
-                        dataGridView1.Rows.Add(i + 1, articles[i], items[i].Price_card, items[i].Price, items[i].Price_old);
+                    if (item.Article_found == "true")
+                        dataGridView1.Rows.Add(i + 1, articles[i], item.Price_card, item.Price, item.Price_old);
                     else
                         dataGridView1.Rows.Add(i + 1, articles[i], "нет цен");
                 else
@@ -162,12 +163,13 @@ namespace parser_OZON_webview
 
 
 
+        //private async Task<List<string>> GetPrices(string article)
         private async Task<List<string>> GetPrices(string article)
         {
-            article = "1746727978";
+            //article = "1746727978";
             var url = $"{URL_OZON}{article}"; // URL товара
             //var httpClient = new HttpClient();
-            //string response = "";
+            string response = "";
             //try
             //{
             //    response = await httpClient.GetStringAsync(url);
@@ -179,18 +181,29 @@ namespace parser_OZON_webview
             httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36");
             httpClient.DefaultRequestHeaders.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8");
             httpClient.DefaultRequestHeaders.Add("Accept-Language", "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7");
-            httpClient.DefaultRequestHeaders.Add("Accept-Encoding", "gzip, deflate, br");
+            //httpClient.DefaultRequestHeaders.Add("Accept-Encoding", "gzip, deflate, br");
             httpClient.DefaultRequestHeaders.Add("Connection", "keep-alive");
 
             var cookies = "__Secure-ETC=5f7254d476bad14654f34a9db4926b84; abt_data=7.PiM4AFbZG4NUzgayVZ06Drd9UajRWBJ0b-JCjj1WtQ_aHR3HMoDE_f_P8NF0JfkSuYClNCRjqHh90Qwi43s_OVApILmfiSZ77BSNUm79FJd_ytntS-xgBTxRqgDckfhzQBWQ2Piq0X5ZEe-cgl-BGfjdO5IpqC6T4voIC4ezuwcPonM9U7vhcSm_AEXKQmfoW6LePe0mJjzBcVTe1PjAs1u67UWiuvhKTgQTYHKTWqtwZWIy3x982CsN7oNnW1iQvDCmJjMC9Hi3dBmlrcvQCl46h_NERkOW4q71aIvGcUTYfR-txnqaZ14iUtiSJkTtIerI8UAZPJxeKtjcjwssXYZ2JGTUcxOsjLVA4MWuQk7qe8PqIJVUDnUfBXbwQA"; // Замените на ваши куки
             httpClient.DefaultRequestHeaders.Add("Cookie", cookies);
 
-            var r = await httpClient.GetAsync(url);
-            var response = await r.Content.ReadAsStringAsync();
+            //var r = await httpClient.GetAsync(url);
+            //if (r.StatusCode != System.Net.HttpStatusCode.OK) MessageBox.Show("asdas");
+            //var response = await r.Content.ReadAsStringAsync();
+            try
+            {
+                response = await httpClient.GetStringAsync(url);
+            }
+            catch 
+            {
+                //Debug.WriteLine(article);
+                //MessageBox.Show("fghk");
+            }
+            //Debug.WriteLine(response);
             List<string> values = [];
 
             var htmlDocument = new HtmlAgilityPack.HtmlDocument();
-            // !!!!!!!!!!!!!!!!htmlDocument.LoadHtml(response);
+            
             htmlDocument.LoadHtml(response);
 
             // Находим элемент <div data-widget="webPrice">
@@ -379,9 +392,5 @@ namespace parser_OZON_webview
                 e.Cancel = true;
         }
 
-        private void button1_Click(object sender, EventArgs e)
-        {
-            webView21.CoreWebView2.Navigate("https://www.ozon.ru/product/1746727978");
-        }
     }
 }

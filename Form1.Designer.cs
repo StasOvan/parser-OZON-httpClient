@@ -43,15 +43,12 @@
             Цена_старая = new DataGridViewTextBoxColumn();
             groupBox1 = new GroupBox();
             groupBox2 = new GroupBox();
-            webView21 = new Microsoft.Web.WebView2.WinForms.WebView2();
             btnStartParse = new Button();
             notifyIcon1 = new NotifyIcon(components);
             timer1 = new System.Windows.Forms.Timer(components);
-            button1 = new Button();
             ((System.ComponentModel.ISupportInitialize)dataGridView1).BeginInit();
             groupBox1.SuspendLayout();
             groupBox2.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)webView21).BeginInit();
             SuspendLayout();
             // 
             // label1
@@ -168,18 +165,6 @@
             groupBox2.TabStop = false;
             groupBox2.Text = "Результат парсинга";
             // 
-            // webView21
-            // 
-            webView21.AllowExternalDrop = true;
-            webView21.CreationProperties = null;
-            webView21.DefaultBackgroundColor = Color.White;
-            webView21.Location = new Point(-601, 273);
-            webView21.Name = "webView21";
-            webView21.Size = new Size(613, 421);
-            webView21.Source = new Uri("https://www.ozon.ru/product/1746727978", UriKind.Absolute);
-            webView21.TabIndex = 9;
-            webView21.ZoomFactor = 1D;
-            // 
             // btnStartParse
             // 
             btnStartParse.BackColor = Color.Teal;
@@ -206,23 +191,11 @@
             // 
             timer1.Tick += timer1_Tick;
             // 
-            // button1
-            // 
-            button1.Location = new Point(684, 9);
-            button1.Name = "button1";
-            button1.Size = new Size(75, 23);
-            button1.TabIndex = 8;
-            button1.Text = "button1";
-            button1.UseVisualStyleBackColor = true;
-            button1.Click += button1_Click;
-            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 17F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(881, 606);
-            Controls.Add(webView21);
-            Controls.Add(button1);
             Controls.Add(btnStartParse);
             Controls.Add(groupBox2);
             Controls.Add(groupBox1);
@@ -243,7 +216,6 @@
             groupBox1.ResumeLayout(false);
             groupBox1.PerformLayout();
             groupBox2.ResumeLayout(false);
-            ((System.ComponentModel.ISupportInitialize)webView21).EndInit();
             ResumeLayout(false);
             PerformLayout();
         }
@@ -266,7 +238,5 @@
         private DataGridViewTextBoxColumn Цена_старая;
         private NotifyIcon notifyIcon1;
         private System.Windows.Forms.Timer timer1;
-        private Button button1;
-        private Microsoft.Web.WebView2.WinForms.WebView2 webView21;
     }
 }
