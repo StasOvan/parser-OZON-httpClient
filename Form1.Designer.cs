@@ -46,6 +46,7 @@
             btnStartParse = new Button();
             notifyIcon1 = new NotifyIcon(components);
             timer1 = new System.Windows.Forms.Timer(components);
+            linkLabel2 = new LinkLabel();
             ((System.ComponentModel.ISupportInitialize)dataGridView1).BeginInit();
             groupBox1.SuspendLayout();
             groupBox2.SuspendLayout();
@@ -191,6 +192,17 @@
             // 
             timer1.Tick += timer1_Tick;
             // 
+            // linkLabel2
+            // 
+            linkLabel2.AutoSize = true;
+            linkLabel2.Location = new Point(684, 9);
+            linkLabel2.Name = "linkLabel2";
+            linkLabel2.Size = new Size(57, 17);
+            linkLabel2.TabIndex = 3;
+            linkLabel2.TabStop = true;
+            linkLabel2.Text = "feed.xml";
+            linkLabel2.LinkClicked += linkLabel2_LinkClicked;
+            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 17F);
@@ -199,6 +211,7 @@
             Controls.Add(btnStartParse);
             Controls.Add(groupBox2);
             Controls.Add(groupBox1);
+            Controls.Add(linkLabel2);
             Controls.Add(linkLabel1);
             Controls.Add(label2);
             Controls.Add(textBox1);
@@ -238,5 +251,6 @@
         private DataGridViewTextBoxColumn Цена_старая;
         private NotifyIcon notifyIcon1;
         private System.Windows.Forms.Timer timer1;
+        private LinkLabel linkLabel2;
     }
 }

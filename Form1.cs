@@ -2,12 +2,15 @@
 using System.Text;
 using System.Text.Json;
 using System.Xml.Linq;
+using static System.Net.WebRequestMethods;
 
 namespace parser_OZON_webview
 {
 
     public partial class Form1 : Form
     {
+        const string URL_WORKER = "https://myqu.ru/_turistore/worker.php";
+        const string URL_FEED = "https://myqu.ru/_turistore/feed.xml";
         const string URL_XML = "https://www.turistore.ru/marketplace/4241103.xml";
         const string URL_OZON = "https://www.ozon.ru/product/";
         const string URL_ENDPOINT = "https://myqu.ru/_turistore/worker_ozon.php";
@@ -18,7 +21,7 @@ namespace parser_OZON_webview
         int flagSTATUS;
         List<string> articles;
         List<Item> items = new List<Item>();
-        
+
 
         public Form1()
         {
@@ -62,6 +65,8 @@ namespace parser_OZON_webview
             AddHistoryText($"Идет парсинг ..");
             for (var i = 0; i < articles.Count; i++)
             {
+                //if (i == 10) break;
+                //Application.DoEvents();
                 Item item = new();
                 groupBox2.Text = $"Результат парсинга ({i + 1} из {articles.Count}):";
 
@@ -72,6 +77,12 @@ namespace parser_OZON_webview
 
                     if (flagSTATUS == -1)
                     {
+                        item.Article = articles[i];
+                        item.Price_card = "";
+                        item.Price = "";
+                        item.Price_old = "";
+                        item.Article_found = "false";
+                        items.Add(item);
                         dataGridView1.Rows.Add(i + 1, articles[i], "Такой страницы не существует");
                         continue;
                     }
@@ -104,14 +115,19 @@ namespace parser_OZON_webview
                 else
                     dataGridView1.Rows.Add(i + 1, "нет артикула");
 
-                //if (i == 10) break;
-
             }
 
             AddHistoryText("Парсинг завершен.");
             AddHistoryText("Сохранение данных ..");
             PostJsonToEndPoint(); // отправляем данные на worker_ozon
             AddHistoryText("Данные сохранены.");
+
+            AddHistoryText("Запуск обработчика feed.xml ..");
+            if ( RunWorker() == true )
+                AddHistoryText("Фид feed.xml успешно изменен.");
+            else
+                AddHistoryText("Ошибка работы worker!");
+
 
             // завершение парсинга
             btnStartParse.Enabled = true;
@@ -158,16 +174,16 @@ namespace parser_OZON_webview
             {
                 response = await httpClient.GetStringAsync(url);
             }
-            catch 
+            catch
             {
                 //Debug.WriteLine(article);
                 //MessageBox.Show("fghk");
             }
-            
+
             List<string> values = [];
 
             var htmlDocument = new HtmlAgilityPack.HtmlDocument();
-            
+
             htmlDocument.LoadHtml(response);
 
             // Находим элемент <div data-widget="webPrice">
@@ -263,10 +279,24 @@ namespace parser_OZON_webview
             }
         }
 
-        private void linkLabel1_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+        private bool RunWorker()
         {
-            string telegramUrl = "tg://resolve?domain=cmacuk";
-            Process.Start(new ProcessStartInfo(telegramUrl) { UseShellExecute = true });
+            string url = URL_WORKER;
+
+            try
+            {
+                httpClient.DefaultRequestHeaders.Clear();
+                var r = httpClient.GetAsync(url).GetAwaiter().GetResult();
+                r.EnsureSuccessStatusCode(); // выбросит исключение, если код ответа не 2xx
+                var response = r.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                if ( response.Contains("true") ) return true; else return false;
+            }
+            catch (Exception ex)
+            {
+                //MessageBox.Show($"Ошибка: {ex.Message}");
+                return false;
+            }
+
         }
 
         private void btnStartParse_Click(object sender, EventArgs e)
@@ -325,6 +355,17 @@ namespace parser_OZON_webview
                                            MessageBoxIcon.Question);
             if (result == DialogResult.No)
                 e.Cancel = true;
+        }
+
+        private void linkLabel1_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+        {
+            var telegramUrl = "tg://resolve?domain=cmacuk";
+            Process.Start(new ProcessStartInfo(telegramUrl) { UseShellExecute = true });
+        }
+        private void linkLabel2_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+        {
+            var url = URL_FEED;
+            Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
         }
     }
 }
