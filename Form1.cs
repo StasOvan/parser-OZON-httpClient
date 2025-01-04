@@ -1,37 +1,24 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Collections.Specialized;
-using System.Diagnostics;
-using System.Net.Http;
+﻿using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
-using HtmlAgilityPack;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text.RegularExpressions;
-using System.Timers;
-using Timer = System.Timers.Timer;
 using System.Xml.Linq;
-using System.Windows.Forms;
-using static System.Net.WebRequestMethods;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.TrackBar;
-using System.ComponentModel;
 
 namespace parser_OZON_webview
 {
 
     public partial class Form1 : Form
     {
-        //const string URL_XML = "https://myqu.ru/_turistore/feed.xml";
         const string URL_XML = "https://www.turistore.ru/marketplace/4241103.xml";
         const string URL_OZON = "https://www.ozon.ru/product/";
         const string URL_ENDPOINT = "https://myqu.ru/_turistore/worker_ozon.php";
+        const string COOKIES = "__Secure-ETC=5f7254d476bad14654f34a9db4926b84; abt_data=7.PiM4AFbZG4NUzgayVZ06Drd9UajRWBJ0b-JCjj1WtQ_aHR3HMoDE_f_P8NF0JfkSuYClNCRjqHh90Qwi43s_OVApILmfiSZ77BSNUm79FJd_ytntS-xgBTxRqgDckfhzQBWQ2Piq0X5ZEe-cgl-BGfjdO5IpqC6T4voIC4ezuwcPonM9U7vhcSm_AEXKQmfoW6LePe0mJjzBcVTe1PjAs1u67UWiuvhKTgQTYHKTWqtwZWIy3x982CsN7oNnW1iQvDCmJjMC9Hi3dBmlrcvQCl46h_NERkOW4q71aIvGcUTYfR-txnqaZ14iUtiSJkTtIerI8UAZPJxeKtjcjwssXYZ2JGTUcxOsjLVA4MWuQk7qe8PqIJVUDnUfBXbwQA";
+
+        private static readonly HttpClient httpClient = new HttpClient();
+
         int flagSTATUS;
         List<string> articles;
         List<Item> items = new List<Item>();
-        private static readonly HttpClient httpClient = new HttpClient();
-
+        
 
         public Form1()
         {
@@ -65,26 +52,27 @@ namespace parser_OZON_webview
             AddHistoryText("Выполнение запроса ..");
             LoadArticles();
             AddHistoryText("Запрос выполнен.");
-            var c = 1;
+            var c = 0;
             for (var i = 0; i < articles.Count; i++)
                 if (articles[i] != "") c++;
-            AddHistoryText($"Найдено записей: {articles.Count.ToString()}");
-            AddHistoryText($"Найдено артикулов: {c.ToString()}");
+            AddHistoryText($"Найдено записей: {articles.Count}");
+            AddHistoryText($"Найдено артикулов: {c}");
 
             // парсинг
             AddHistoryText($"Идет парсинг ..");
             for (var i = 0; i < articles.Count; i++)
             {
-                Item item = new Item();
+                Item item = new();
+                groupBox2.Text = $"Результат парсинга ({i + 1} из {articles.Count}):";
 
                 if (articles[i] != "")
                 {
                     flagSTATUS = 1;
                     List<string> prices = await GetPrices(articles[i]);
+
                     if (flagSTATUS == -1)
                     {
-                        Application.DoEvents();
-                        dataGridView1.Rows.Add(i + 1, "Такой страницы не существует");
+                        dataGridView1.Rows.Add(i + 1, articles[i], "Такой страницы не существует");
                         continue;
                     }
 
@@ -107,10 +95,7 @@ namespace parser_OZON_webview
                 }
 
                 items.Add(item);
-                //Application.DoEvents();
 
-                groupBox2.Text = $"Результат парсинга ({i + 1} из {articles.Count}):";
-                Debug.WriteLine(i);
                 if (articles[i] != "")
                     if (item.Article_found == "true")
                         dataGridView1.Rows.Add(i + 1, articles[i], item.Price_card, item.Price, item.Price_old);
@@ -122,74 +107,53 @@ namespace parser_OZON_webview
                 //if (i == 10) break;
 
             }
+
             AddHistoryText("Парсинг завершен.");
             AddHistoryText("Сохранение данных ..");
             PostJsonToEndPoint(); // отправляем данные на worker_ozon
             AddHistoryText("Данные сохранены.");
 
             // завершение парсинга
-            if (InvokeRequired) this.Invoke(new Action(() => btnStartParse.Enabled = true)); else btnStartParse.Enabled = true;
+            btnStartParse.Enabled = true;
             switch (flagSTATUS)
             {
                 case -1:
-                    this.label1.Invoke((MethodInvoker)delegate
-                    {
-                        label1.Text = DateTime.Now + " ВНИМАНИЕ! Парсинг не выполнен. Произошла ошибка.";
-                        label1.BackColor = Color.IndianRed;
-                        label1.ForeColor = Color.White;
-                    });
+                    label1.Text = DateTime.Now + " ВНИМАНИЕ! Парсинг не выполнен. Произошла ошибка.";
+                    label1.BackColor = Color.IndianRed;
+                    label1.ForeColor = Color.White;
                     break;
                 case 0:
-                    this.label1.Invoke((MethodInvoker)delegate
-                    {
-                        label1.Text = DateTime.Now + " что-то пошло не так ..";
-                        label1.BackColor = Color.Yellow;
-                        label1.ForeColor = Color.Black;
-                    });
+                    label1.Text = DateTime.Now + " что-то пошло не так ..";
+                    label1.BackColor = Color.Yellow;
+                    label1.ForeColor = Color.Black;
                     break;
                 case 1:
-                    this.label1.Invoke((MethodInvoker)delegate
-                    {
-                        label1.Text = " Последнее сканирование: " + DateTime.Now;
-                        label1.BackColor = Color.DarkGreen;
-                        label1.ForeColor = Color.White;
-                    });
+                    label1.Text = " Последнее сканирование: " + DateTime.Now;
+                    label1.BackColor = Color.DarkGreen;
+                    label1.ForeColor = Color.White;
                     break;
             }
 
             AddHistoryText("### ЗАВЕРШЕНО ###");
             GC.Collect();
+
         }
 
 
-
-        //private async Task<List<string>> GetPrices(string article)
         private async Task<List<string>> GetPrices(string article)
         {
             //article = "1746727978";
-            var url = $"{URL_OZON}{article}"; // URL товара
-            //var httpClient = new HttpClient();
+            string url = $"{URL_OZON}{article}"; // URL товара
             string response = "";
-            //try
-            //{
-            //    response = await httpClient.GetStringAsync(url);
-            //}
-            //catch
-            //{
-            //    flagSTATUS = -1;
-            //}
+
+            httpClient.DefaultRequestHeaders.Clear();
             httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36");
             httpClient.DefaultRequestHeaders.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8");
             httpClient.DefaultRequestHeaders.Add("Accept-Language", "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7");
             //httpClient.DefaultRequestHeaders.Add("Accept-Encoding", "gzip, deflate, br");
             httpClient.DefaultRequestHeaders.Add("Connection", "keep-alive");
+            httpClient.DefaultRequestHeaders.Add("Cookie", COOKIES);
 
-            var cookies = "__Secure-ETC=5f7254d476bad14654f34a9db4926b84; abt_data=7.PiM4AFbZG4NUzgayVZ06Drd9UajRWBJ0b-JCjj1WtQ_aHR3HMoDE_f_P8NF0JfkSuYClNCRjqHh90Qwi43s_OVApILmfiSZ77BSNUm79FJd_ytntS-xgBTxRqgDckfhzQBWQ2Piq0X5ZEe-cgl-BGfjdO5IpqC6T4voIC4ezuwcPonM9U7vhcSm_AEXKQmfoW6LePe0mJjzBcVTe1PjAs1u67UWiuvhKTgQTYHKTWqtwZWIy3x982CsN7oNnW1iQvDCmJjMC9Hi3dBmlrcvQCl46h_NERkOW4q71aIvGcUTYfR-txnqaZ14iUtiSJkTtIerI8UAZPJxeKtjcjwssXYZ2JGTUcxOsjLVA4MWuQk7qe8PqIJVUDnUfBXbwQA"; // Замените на ваши куки
-            httpClient.DefaultRequestHeaders.Add("Cookie", cookies);
-
-            //var r = await httpClient.GetAsync(url);
-            //if (r.StatusCode != System.Net.HttpStatusCode.OK) MessageBox.Show("asdas");
-            //var response = await r.Content.ReadAsStringAsync();
             try
             {
                 response = await httpClient.GetStringAsync(url);
@@ -199,7 +163,7 @@ namespace parser_OZON_webview
                 //Debug.WriteLine(article);
                 //MessageBox.Show("fghk");
             }
-            //Debug.WriteLine(response);
+            
             List<string> values = [];
 
             var htmlDocument = new HtmlAgilityPack.HtmlDocument();
@@ -220,12 +184,9 @@ namespace parser_OZON_webview
                 else
                     values.Add("");
 
-                Debug.WriteLine(article);
                 if (divs.Count > 1)
                 {
-
                     var spanNodes = divs[1].SelectNodes(".//span");
-
                     if (spanNodes[0] != null)
                         values.Add(ExtractDigits(spanNodes[0].InnerText));
                     else
@@ -253,36 +214,12 @@ namespace parser_OZON_webview
                 flagSTATUS = -1;
                 return null;
             }
-
-        }
-
-        static List<string> ExtractPricesContainingRuble(HtmlNode container)
-        {
-            // Находим все элементы <div> внутри priceContainer
-            var divs = container.SelectNodes(".//div");
-            // Фильтруем и извлекаем элементы, содержащие "₽"
-            var prices = divs
-                .Select(div => div.InnerText.Trim())
-                .Where(text => text.Contains("₽"))
-                .ToList();
-            return prices;
-        }
-
-        static List<string> ExtractUniquePrices(List<string> inputList)
-        {
-            var regex = new Regex(@"[\d\s]+₽");
-            var uniquePrices = new HashSet<string>();
-            foreach (var input in inputList)
-            {
-                var matches = regex.Matches(input);
-                foreach (Match match in matches)
-                    uniquePrices.Add(match.Value.Trim().Replace("₽", "").Replace(" ", ""));
-            }
-            return uniquePrices.ToList();
         }
 
         private void LoadArticles()
         {
+            httpClient.DefaultRequestHeaders.Clear();
+
             try
             {
                 var response = httpClient.GetStringAsync(URL_XML).Result;
@@ -291,7 +228,7 @@ namespace parser_OZON_webview
                 foreach (var offerElement in xdoc.Descendants("offer"))
                 {
                     var articleOzon = offerElement.Element("article_ozon")?.Value;
-                    if (articleOzon != null) articles.Add(articleOzon);
+                    if (articleOzon != null || articleOzon != "") articles.Add(articleOzon);
                 }
             }
             catch (Exception ex)
@@ -299,10 +236,9 @@ namespace parser_OZON_webview
                 AddHistoryText($"Ошибка загрузки данных: {ex.Message}");
                 flagSTATUS = 0;
             }
-
         }
 
-        private void PostJsonToEndPoint() // работает с скписком items
+        private void PostJsonToEndPoint() // работает с списком items
         {
             // URL для отправки данных
             string url = URL_ENDPOINT;
@@ -310,9 +246,8 @@ namespace parser_OZON_webview
             // Отправка POST-запроса
             using (HttpClient client = new HttpClient())
             {
-                // Преобразование словаря в JSON
+                // Преобразование в JSON
                 string json = JsonSerializer.Serialize(items);
-
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
 
                 // Выполнение POST-запроса
@@ -391,6 +326,5 @@ namespace parser_OZON_webview
             if (result == DialogResult.No)
                 e.Cancel = true;
         }
-
     }
 }
