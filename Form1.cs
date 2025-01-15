@@ -1,4 +1,6 @@
-﻿using System.Diagnostics;
+﻿using parser_OZON;
+using System.Diagnostics;
+using System.Net;
 using System.Text;
 using System.Text.Json;
 using System.Xml.Linq;
@@ -14,9 +16,10 @@ namespace parser_OZON_webview
         const string URL_XML = "https://www.turistore.ru/marketplace/4241103.xml";
         const string URL_OZON = "https://www.ozon.ru/product/";
         const string URL_ENDPOINT = "https://myqu.ru/_turistore/worker_ozon.php";
-        const string COOKIES = "__Secure-ETC=5f7254d476bad14654f34a9db4926b84; abt_data=7.PiM4AFbZG4NUzgayVZ06Drd9UajRWBJ0b-JCjj1WtQ_aHR3HMoDE_f_P8NF0JfkSuYClNCRjqHh90Qwi43s_OVApILmfiSZ77BSNUm79FJd_ytntS-xgBTxRqgDckfhzQBWQ2Piq0X5ZEe-cgl-BGfjdO5IpqC6T4voIC4ezuwcPonM9U7vhcSm_AEXKQmfoW6LePe0mJjzBcVTe1PjAs1u67UWiuvhKTgQTYHKTWqtwZWIy3x982CsN7oNnW1iQvDCmJjMC9Hi3dBmlrcvQCl46h_NERkOW4q71aIvGcUTYfR-txnqaZ14iUtiSJkTtIerI8UAZPJxeKtjcjwssXYZ2JGTUcxOsjLVA4MWuQk7qe8PqIJVUDnUfBXbwQA";
+        //const string COOKIES = "__Secure-ab-group=45; __Secure-user-id=0; TS0121feed=0187c00a189e5e85614c893e494f069578f27ee212ecdb0b1cb031d93dba740c8f379aba1de950e1f99ab11ba3f2b8ac4dbfa5c2b9; xcid=843e375db001e54ecc38178105ba6106; __Secure-ext_xcid=843e375db001e54ecc38178105ba6106; __Secure-ETC=e1d6a015c027bd6c0ca26433b5b16735; abt_data=7.jmrBXcZKNt1kIH6W6Jo2C8WWMC5vSDpUTRsdgZvhmda9ieGuRoqkDo8YrKD5zBHE8CYpsyKx23A2C3MEG0WdJE_F26JrmgIUhCH1E1o__IeN6Y1DsoB3Wauk13d40ujpDJZISynXHH_varIbkZM0x_yX7u689FZGFg73FLdJVcwgFzeSKxYhLmSewDQ0I0zapZ8XiJ5nn4qGQyrHi4gf8iaflj-OO9AD0mPI0QxPMuKn7MEcUra1AV-Te1xw_usDdXllKnf7B1J4ZSgkFTS2j6R7fthGK-3UCk6CAYcWoMisVrIdQYsO47T_SOG5CW_EPIwWfVk74awro8fknyQ0arLgwiHM1zTQwXRW7vHnkrxxARn-mWEyHXPnNLKZC27nyVMJb35PTTUXN5p8fYUZ6XxtLESMma8Cl3DINvnejwqmKcFhd5uRaoAWOTCZcnN8Y-lEkSuYfVCgLdl2dfpeGBi_qCln4onYMpQTbDvhfA; __Secure-access-token=6.0.mlqDRhLgQqim49lMuNw3Hg.45.AdStCyh2AuTEIRLt7-1Mr92uJzwzD_1ylLIyRSXtty7NTrN8viSnLNLy7jAS6T0IDg..20250109150058.-bO3FRNDOt3ko31YXxKlCf0af4C7MY8_AsofuF6x4rU.1c4d2e3d7b2c3db6a; __Secure-refresh-token=6.0.mlqDRhLgQqim49lMuNw3Hg.45.AdStCyh2AuTEIRLt7-1Mr92uJzwzD_1ylLIyRSXtty7NTrN8viSnLNLy7jAS6T0IDg..20250109150058.KCtvrW_aLjUoq7yhBlw3fmLPfNCFMw_jioRJfpEEw1I.16f338e67704849bb; ADDRESSBOOKBAR_WEB_CLARIFICATION=1736427665; rfuid=NjkyNDcyNDUyLDEyNC4wNDM0NzUyNzUxNjA3NCwxOTA3MzMzOTM0LC0xLC0xNjMwNjYwMTgzLFczc2libUZ0WlNJNklsQkVSaUJXYVdWM1pYSWlMQ0prWlhOamNtbHdkR2x2YmlJNklsQnZjblJoWW14bElFUnZZM1Z0Wlc1MElFWnZjbTFoZENJc0ltMXBiV1ZVZVhCbGN5STZXM3NpZEhsd1pTSTZJbUZ3Y0d4cFkyRjBhVzl1TDNCa1ppSXNJbk4xWm1acGVHVnpJam9pY0dSbUluMHNleUowZVhCbElqb2lkR1Y0ZEM5d1pHWWlMQ0p6ZFdabWFYaGxjeUk2SW5Ca1ppSjlYWDBzZXlKdVlXMWxJam9pUTJoeWIyMWxJRkJFUmlCV2FXVjNaWElpTENKa1pYTmpjbWx3ZEdsdmJpSTZJbEJ2Y25SaFlteGxJRVJ2WTNWdFpXNTBJRVp2Y20xaGRDSXNJbTFwYldWVWVYQmxjeUk2VzNzaWRIbHdaU0k2SW1Gd2NHeHBZMkYwYVc5dUwzQmtaaUlzSW5OMVptWnBlR1Z6SWpvaWNHUm1JbjBzZXlKMGVYQmxJam9pZEdWNGRDOXdaR1lpTENKemRXWm1hWGhsY3lJNkluQmtaaUo5WFgwc2V5SnVZVzFsSWpvaVEyaHliMjFwZFcwZ1VFUkdJRlpwWlhkbGNpSXNJbVJsYzJOeWFYQjBhVzl1SWpvaVVHOXlkR0ZpYkdVZ1JHOWpkVzFsYm5RZ1JtOXliV0YwSWl3aWJXbHRaVlI1Y0dWeklqcGJleUowZVhCbElqb2lZWEJ3YkdsallYUnBiMjR2Y0dSbUlpd2ljM1ZtWm1sNFpYTWlPaUp3WkdZaWZTeDdJblI1Y0dVaU9pSjBaWGgwTDNCa1ppSXNJbk4xWm1acGVHVnpJam9pY0dSbUluMWRmU3g3SW01aGJXVWlPaUpOYVdOeWIzTnZablFnUldSblpTQlFSRVlnVm1sbGQyVnlJaXdpWkdWelkzSnBjSFJwYjI0aU9pSlFiM0owWVdKc1pTQkViMk4xYldWdWRDQkdiM0p0WVhRaUxDSnRhVzFsVkhsd1pYTWlPbHQ3SW5SNWNHVWlPaUpoY0hCc2FXTmhkR2x2Ymk5d1pHWWlMQ0p6ZFdabWFYaGxjeUk2SW5Ca1ppSjlMSHNpZEhsd1pTSTZJblJsZUhRdmNHUm1JaXdpYzNWbVptbDRaWE1pT2lKd1pHWWlmVjE5TEhzaWJtRnRaU0k2SWxkbFlrdHBkQ0JpZFdsc2RDMXBiaUJRUkVZaUxDSmtaWE5qY21sd2RHbHZiaUk2SWxCdmNuUmhZbXhsSUVSdlkzVnRaVzUwSUVadmNtMWhkQ0lzSW0xcGJXVlVlWEJsY3lJNlczc2lkSGx3WlNJNkltRndjR3hwWTJGMGFXOXVMM0JrWmlJc0luTjFabVpwZUdWeklqb2ljR1JtSW4wc2V5SjBlWEJsSWpvaWRHVjRkQzl3WkdZaUxDSnpkV1ptYVhobGN5STZJbkJrWmlKOVhYMWQsV3lKeWRTMVNWU0pkLDAsMSwwLDI0LDIzNzQxNTkzMCw4LDIyNzEyNjUyMCwwLDEsMCwtNDkxMjc1NTIzLFIyOXZaMnhsSUVsdVl5NGdUbVYwYzJOaGNHVWdSMlZqYTI4Z1YybHVNeklnTlM0d0lDaFhhVzVrYjNkeklFNVVJREV3TGpBN0lGZHBialkwT3lCNE5qUXBJRUZ3Y0d4bFYyVmlTMmwwTHpVek55NHpOaUFvUzBoVVRVd3NJR3hwYTJVZ1IyVmphMjhwSUVOb2NtOXRaUzh4TXpFdU1DNHdMakFnVTJGbVlYSnBMelV6Tnk0ek5pQXlNREF6TURFd055Qk5iM3BwYkd4aCxleUpqYUhKdmJXVWlPbnNpWVhCd0lqcDdJbWx6U1c1emRHRnNiR1ZrSWpwbVlXeHpaU3dpU1c1emRHRnNiRk4wWVhSbElqcDdJa1JKVTBGQ1RFVkVJam9pWkdsellXSnNaV1FpTENKSlRsTlVRVXhNUlVRaU9pSnBibk4wWVd4c1pXUWlMQ0pPVDFSZlNVNVRWRUZNVEVWRUlqb2libTkwWDJsdWMzUmhiR3hsWkNKOUxDSlNkVzV1YVc1blUzUmhkR1VpT25zaVEwRk9UazlVWDFKVlRpSTZJbU5oYm01dmRGOXlkVzRpTENKU1JVRkVXVjlVVDE5U1ZVNGlPaUp5WldGa2VWOTBiMTl5ZFc0aUxDSlNWVTVPU1U1SElqb2ljblZ1Ym1sdVp5SjlmWDE5LDY1LC0xMjg1NTUxMywxLDEsLTEsMTY5OTk1NDg4NywxNjk5OTU0ODg3LC0xMTI2MzA0Nzc0LDI=";
+        const string COOKIE = "__Secure-ab-group=45; __Secure-user-id=0; TS0121feed=0187c00a189e5e85614c893e494f069578f27ee212ecdb0b1cb031d93dba740c8f379aba1de950e1f99ab11ba3f2b8ac4dbfa5c2b9; xcid=843e375db001e54ecc38178105ba6106; __Secure-ext_xcid=843e375db001e54ecc38178105ba6106; is_cookies_accepted=1; __Secure-ETC=d4738a8c9832fb49afcbb85a056c5cdc; abt_data=7.HtY4LCIlBhfGH4HAEu-wKcUyQIXge3F4yx4tARfY38avm6wyUBRwXLxU7Kir3KVCkEkGcknGD8z-vQhJj_YZqVk0ABJTIOOTuZqmMx08gB9Maky-wuLHwWJ8eFk6_YplhNene58bEdOP_2hDhXNHdgw95KtyAOKJS6_qO5B8Fe4ZJfmtONVD7frmKieXbHRb3p6vvROb68_IUUyUsVZfCg04QttJVkrt5W1CgbJxckTX46vYr1KIE7uUXpgpIjpN19IkXOkHYMMczmNJeQEDyTMyqXAKKczmD-YvkKtRBmTfU3Q0GC_X5mFit5sdbkjpq1qtVK5tKt0MfiUMJ0g2vnyfZ4QfABoKWfc3YrqRt-NxREvih9buVPVckmkygoFIj1ord5_q440MtUNgkEsajjCtQyGLKpZ7kLSzT9M0KoUBbG886jbxDy2XND51SSdIvF9SwPcRlOdtlql8v3VCWrwFfDqWV0VJFBJY-u7mB-pkeIze_iEKtFSyulk2QzE; ADDRESSBOOKBAR_WEB_CLARIFICATION=1736711480; __Secure-refresh-token=6.0.mlqDRhLgQqim49lMuNw3Hg.45.AdStCyh2AuTEIRLt7-1Mr92uJzwzD_1ylLIyRSXtty7NTrN8viSnLNLy7jAS6T0IDg..20250115043930.HZSLHNnB9ETKwrB3KZBhD2eLuxjlYByAvnCB7egH1DQ.124b3905e54bb93a9; __Secure-access-token=6.0.mlqDRhLgQqim49lMuNw3Hg.45.AdStCyh2AuTEIRLt7-1Mr92uJzwzD_1ylLIyRSXtty7NTrN8viSnLNLy7jAS6T0IDg..20250115043930.2kAC7qy9FUleZfNxwmXFvbDnk1wlzsYzBlE0MJrMQ7Y.114e393b0846c15ea; TS0149423d=0187c00a18d851c756bbae4c1dcb2e108e4e96ac40cfdcf9f306223c24bc9644f22067f428601c188bde1136fa98f758d5f02f6796; rfuid=NjkyNDcyNDUyLDEyNC4wNDM0NzUyNzUxNjA3NCwxOTA3MzMzOTM0LC0xLC0xNjMwNjYwMTgzLFczc2libUZ0WlNJNklsQkVSaUJXYVdWM1pYSWlMQ0prWlhOamNtbHdkR2x2YmlJNklsQnZjblJoWW14bElFUnZZM1Z0Wlc1MElFWnZjbTFoZENJc0ltMXBiV1ZVZVhCbGN5STZXM3NpZEhsd1pTSTZJbUZ3Y0d4cFkyRjBhVzl1TDNCa1ppSXNJbk4xWm1acGVHVnpJam9pY0dSbUluMHNleUowZVhCbElqb2lkR1Y0ZEM5d1pHWWlMQ0p6ZFdabWFYaGxjeUk2SW5Ca1ppSjlYWDBzZXlKdVlXMWxJam9pUTJoeWIyMWxJRkJFUmlCV2FXVjNaWElpTENKa1pYTmpjbWx3ZEdsdmJpSTZJbEJ2Y25SaFlteGxJRVJ2WTNWdFpXNTBJRVp2Y20xaGRDSXNJbTFwYldWVWVYQmxjeUk2VzNzaWRIbHdaU0k2SW1Gd2NHeHBZMkYwYVc5dUwzQmtaaUlzSW5OMVptWnBlR1Z6SWpvaWNHUm1JbjBzZXlKMGVYQmxJam9pZEdWNGRDOXdaR1lpTENKemRXWm1hWGhsY3lJNkluQmtaaUo5WFgwc2V5SnVZVzFsSWpvaVEyaHliMjFwZFcwZ1VFUkdJRlpwWlhkbGNpSXNJbVJsYzJOeWFYQjBhVzl1SWpvaVVHOXlkR0ZpYkdVZ1JHOWpkVzFsYm5RZ1JtOXliV0YwSWl3aWJXbHRaVlI1Y0dWeklqcGJleUowZVhCbElqb2lZWEJ3YkdsallYUnBiMjR2Y0dSbUlpd2ljM1ZtWm1sNFpYTWlPaUp3WkdZaWZTeDdJblI1Y0dVaU9pSjBaWGgwTDNCa1ppSXNJbk4xWm1acGVHVnpJam9pY0dSbUluMWRmU3g3SW01aGJXVWlPaUpOYVdOeWIzTnZablFnUldSblpTQlFSRVlnVm1sbGQyVnlJaXdpWkdWelkzSnBjSFJwYjI0aU9pSlFiM0owWVdKc1pTQkViMk4xYldWdWRDQkdiM0p0WVhRaUxDSnRhVzFsVkhsd1pYTWlPbHQ3SW5SNWNHVWlPaUpoY0hCc2FXTmhkR2x2Ymk5d1pHWWlMQ0p6ZFdabWFYaGxjeUk2SW5Ca1ppSjlMSHNpZEhsd1pTSTZJblJsZUhRdmNHUm1JaXdpYzNWbVptbDRaWE1pT2lKd1pHWWlmVjE5TEhzaWJtRnRaU0k2SWxkbFlrdHBkQ0JpZFdsc2RDMXBiaUJRUkVZaUxDSmtaWE5qY21sd2RHbHZiaUk2SWxCdmNuUmhZbXhsSUVSdlkzVnRaVzUwSUVadmNtMWhkQ0lzSW0xcGJXVlVlWEJsY3lJNlczc2lkSGx3WlNJNkltRndjR3hwWTJGMGFXOXVMM0JrWmlJc0luTjFabVpwZUdWeklqb2ljR1JtSW4wc2V5SjBlWEJsSWpvaWRHVjRkQzl3WkdZaUxDSnpkV1ptYVhobGN5STZJbkJrWmlKOVhYMWQsV3lKeWRTMVNWU0pkLDAsMSwwLDI0LDIzNzQxNTkzMCw4LDIyNzEyNjUyMCwwLDEsMCwtNDkxMjc1NTIzLFIyOXZaMnhsSUVsdVl5NGdUbVYwYzJOaGNHVWdSMlZqYTI4Z1YybHVNeklnTlM0d0lDaFhhVzVrYjNkeklFNVVJREV3TGpBN0lGZHBialkwT3lCNE5qUXBJRUZ3Y0d4bFYyVmlTMmwwTHpVek55NHpOaUFvUzBoVVRVd3NJR3hwYTJVZ1IyVmphMjhwSUVOb2NtOXRaUzh4TXpFdU1DNHdMakFnVTJGbVlYSnBMelV6Tnk0ek5pQXlNREF6TURFd055Qk5iM3BwYkd4aCxleUpqYUhKdmJXVWlPbnNpWVhCd0lqcDdJbWx6U1c1emRHRnNiR1ZrSWpwbVlXeHpaU3dpU1c1emRHRnNiRk4wWVhSbElqcDdJa1JKVTBGQ1RFVkVJam9pWkdsellXSnNaV1FpTENKSlRsTlVRVXhNUlVRaU9pSnBibk4wWVd4c1pXUWlMQ0pPVDFSZlNVNVRWRUZNVEVWRUlqb2libTkwWDJsdWMzUmhiR3hsWkNKOUxDSlNkVzV1YVc1blUzUmhkR1VpT25zaVEwRk9UazlVWDFKVlRpSTZJbU5oYm01dmRGOXlkVzRpTENKU1JVRkVXVjlVVDE5U1ZVNGlPaUp5WldGa2VWOTBiMTl5ZFc0aUxDSlNWVTVPU1U1SElqb2ljblZ1Ym1sdVp5SjlmWDE5LDY1LC0xMjg1NTUxMywxLDEsLTEsMTY5OTk1NDg4NywxNjk5OTU0ODg3LC0xMTI2MzA0Nzc0LDI=";
 
-        private static readonly HttpClient httpClient = new HttpClient();
+        HttpClient httpClient;
 
         int flagSTATUS;
         List<string> articles;
@@ -50,7 +53,7 @@ namespace parser_OZON_webview
             btnStartParse.Enabled = false;
             groupBox1.Text = "История действий";
 
-
+            
             AddHistoryText("Инициализация запроса ..");
             AddHistoryText("Выполнение запроса ..");
             LoadArticles();
@@ -123,7 +126,7 @@ namespace parser_OZON_webview
             AddHistoryText("Данные сохранены.");
 
             AddHistoryText("Запуск обработчика feed.xml ..");
-            if ( RunWorker() == true )
+            if (RunWorker() == true)
                 AddHistoryText("Фид feed.xml успешно изменен.");
             else
                 AddHistoryText("Ошибка работы worker!");
@@ -158,33 +161,48 @@ namespace parser_OZON_webview
 
         private async Task<List<string>> GetPrices(string article)
         {
-            //article = "1746727978";
+            await Task.Delay(150);
+
+            var handler = new HttpClientHandler
+            {
+                UseCookies = true,
+                CookieContainer = new CookieContainer()
+            };
+
+            // Создаем HttpClient
+            httpClient = new HttpClient(handler);
+
+            //article = "dzhemper-sevenext-1489352754";
             string url = $"{URL_OZON}{article}"; // URL товара
-            string response = "";
-
-            httpClient.DefaultRequestHeaders.Clear();
-            httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36");
-            httpClient.DefaultRequestHeaders.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8");
+            
+            httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36");
+            httpClient.DefaultRequestHeaders.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7");
             httpClient.DefaultRequestHeaders.Add("Accept-Language", "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7");
-            //httpClient.DefaultRequestHeaders.Add("Accept-Encoding", "gzip, deflate, br");
             httpClient.DefaultRequestHeaders.Add("Connection", "keep-alive");
-            httpClient.DefaultRequestHeaders.Add("Cookie", COOKIES);
+            httpClient.DefaultRequestHeaders.Add("Cookie", COOKIE);
 
-            try
+            //HttpResponseMessage response = await httpClient.GetAsync(url);
+            var response = await httpClient.GetAsync(url);
+            //Debug.WriteLine(response);
+
+            // Проверяем статус ответа
+            if (response.IsSuccessStatusCode)
             {
-                response = await httpClient.GetStringAsync(url);
+                Debug.WriteLine("Запрос выполнен успешно!");
             }
-            catch
+            else
             {
-                //Debug.WriteLine(article);
-                //MessageBox.Show("fghk");
+                Debug.WriteLine($"Ошибка: {response.StatusCode}");
             }
 
+
+           
             List<string> values = [];
 
             var htmlDocument = new HtmlAgilityPack.HtmlDocument();
+            var body = await response.Content.ReadAsStringAsync();
 
-            htmlDocument.LoadHtml(response);
+            htmlDocument.LoadHtml(body);
 
             // Находим элемент <div data-widget="webPrice">
             var priceContainer = htmlDocument.DocumentNode.SelectSingleNode("//div[@data-widget='webPrice']");
@@ -230,11 +248,13 @@ namespace parser_OZON_webview
                 flagSTATUS = -1;
                 return null;
             }
+
+            
         }
 
         private void LoadArticles()
         {
-            httpClient.DefaultRequestHeaders.Clear();
+            httpClient = new HttpClient();
 
             try
             {
@@ -289,7 +309,7 @@ namespace parser_OZON_webview
                 var r = httpClient.GetAsync(url).GetAwaiter().GetResult();
                 r.EnsureSuccessStatusCode(); // выбросит исключение, если код ответа не 2xx
                 var response = r.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-                if ( response.Contains("true") ) return true; else return false;
+                if (response.Contains("true")) return true; else return false;
             }
             catch (Exception ex)
             {
@@ -367,5 +387,59 @@ namespace parser_OZON_webview
             var url = URL_FEED;
             Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
         }
+
+        private void SendMail()
+        {
+            // Создаем экземпляр EmailSender
+            EmailSender emailSender = new EmailSender();
+
+            // Отправляем письмо
+            emailSender.SendEmail("recipient@example.com", "Тема письма", "Содержимое письма");
+        }
+
+        private async void button1_Click(object sender, EventArgs e)
+        {
+            // Создаем HttpClientHandler с поддержкой прокси
+            var proxy = new WebProxy("178.34.190.6:8080");
+            //{
+            //    // Если требуется аутентификация на прокси
+            //    Credentials = new NetworkCredential("username", "password") // Замените на ваши учетные данные, если необходимо
+            //};
+
+            var handler = new HttpClientHandler
+            {
+                Proxy = proxy,
+                UseProxy = true,
+                UseCookies = true,
+                CookieContainer = new CookieContainer()
+            };
+
+            // Создаем HttpClient один раз
+            using var client = new HttpClient(handler);
+
+            // Теперь вы можете использовать client в цикле
+            for (int i = 0; i < 1; i++)
+            {
+                // Ваш код для отправки запросов с использованием client
+                var response = await client.GetAsync("https://www.ozon.ru/product/dzhemper-sevenext-1489352754/");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var content = await response.Content.ReadAsStringAsync();
+                    // Обработка ответа
+                    Debug.WriteLine("Запрос выполнен успешно!");
+                }
+                else
+                {
+                    Debug.WriteLine($"error: {response.StatusCode}");
+                    // Обработка ошибки
+                }
+
+                // Задержка между запросами, если необходимо
+                await Task.Delay(2000); // Задержка в 2 секунды
+            }
+        }
     }
+
+
 }
