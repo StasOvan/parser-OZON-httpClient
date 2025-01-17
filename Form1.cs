@@ -4,7 +4,7 @@ using System.Net;
 using System.Text;
 using System.Text.Json;
 using System.Xml.Linq;
-using static System.Net.WebRequestMethods;
+
 
 namespace parser_OZON_webview
 {
@@ -44,12 +44,10 @@ namespace parser_OZON_webview
 
         private async void StartParser()
         {
-            flagSTATUS = 1;
             dataGridView1.Rows.Clear();
-            articles = [];
-            items = [];
-            //if (InvokeRequired) this.Invoke(new Action(() => btnStartParse.Enabled = false)); else btnStartParse.Enabled = false;
-            //if (InvokeRequired) this.Invoke(new Action(() => groupBox1.Text = "История действий")); else groupBox1.Text = "История действий";
+            articles = new List<string>();
+            items = new List<Item>();
+            
             btnStartParse.Enabled = false;
             groupBox1.Text = "История действий";
 
@@ -69,56 +67,56 @@ namespace parser_OZON_webview
             for (var i = 0; i < articles.Count; i++)
             {
                 //if (i == 10) break;
-                //Application.DoEvents();
+                
+                //articles[i] = "940811029";
+                Debug.WriteLine(articles[i]);
+
                 Item item = new();
                 groupBox2.Text = $"Результат парсинга ({i + 1} из {articles.Count}):";
-
+                
                 if (articles[i] != "")
                 {
                     flagSTATUS = 1;
                     List<string> prices = await GetPrices(articles[i]);
-
+                    
                     if (flagSTATUS == -1)
                     {
                         item.Article = articles[i];
                         item.Price_card = "";
                         item.Price = "";
                         item.Price_old = "";
-                        item.Article_found = "false";
+                        item.Article_found = "article not found";
                         items.Add(item);
                         dataGridView1.Rows.Add(i + 1, articles[i], "Такой страницы не существует");
                         continue;
                     }
 
-                    if (prices != null)
-                    {
-                        item.Article = articles[i];
-                        item.Price_card = prices[0];
-                        item.Price = prices[1];
-                        item.Price_old = prices[2];
+                    item.Article = articles[i];
+                    item.Price_card = prices[0];
+                    item.Price = prices[1];
+                    item.Price_old = prices[2];
+
+                    if (prices[0] != "" || prices[1] != "" || prices[2] != "" )
                         item.Article_found = "true";
-                    }
                     else
-                    {
-                        item.Article = articles[i];
-                        item.Price_card = "";
-                        item.Price = "";
-                        item.Price_old = "";
                         item.Article_found = "false";
-                    }
-                }
 
-                items.Add(item);
 
-                if (articles[i] != "")
+                    items.Add(item);
+
                     if (item.Article_found == "true")
                         dataGridView1.Rows.Add(i + 1, articles[i], item.Price_card, item.Price, item.Price_old);
                     else
                         dataGridView1.Rows.Add(i + 1, articles[i], "нет цен");
+                }
                 else
+                {
                     dataGridView1.Rows.Add(i + 1, "нет артикула");
+                }
+                
 
-            }
+            } // for
+            
 
             AddHistoryText("Парсинг завершен.");
             AddHistoryText("Сохранение данных ..");
@@ -172,84 +170,68 @@ namespace parser_OZON_webview
             // Создаем HttpClient
             httpClient = new HttpClient(handler);
 
-            //article = "dzhemper-sevenext-1489352754";
+            //article = "1620108309";
             string url = $"{URL_OZON}{article}"; // URL товара
             
+            List<string> values = [];
+
             httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36");
             httpClient.DefaultRequestHeaders.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7");
             httpClient.DefaultRequestHeaders.Add("Accept-Language", "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7");
             httpClient.DefaultRequestHeaders.Add("Connection", "keep-alive");
             httpClient.DefaultRequestHeaders.Add("Cookie", COOKIE);
 
+            values.Add("");
+            values.Add("");
+            values.Add("");
+            values.Add(""); // дополнительное пустое значение
+
             //HttpResponseMessage response = await httpClient.GetAsync(url);
             var response = await httpClient.GetAsync(url);
-            //Debug.WriteLine(response);
 
             // Проверяем статус ответа
-            if (response.IsSuccessStatusCode)
-            {
-                Debug.WriteLine("Запрос выполнен успешно!");
-            }
-            else
-            {
-                Debug.WriteLine($"Ошибка: {response.StatusCode}");
-            }
-
-
-           
-            List<string> values = [];
-
+            if (response.IsSuccessStatusCode) flagSTATUS = 1; else return values;
+            
             var htmlDocument = new HtmlAgilityPack.HtmlDocument();
             var body = await response.Content.ReadAsStringAsync();
-
+            //File.WriteAllText("text.html", body);
             htmlDocument.LoadHtml(body);
 
-            // Находим элемент <div data-widget="webPrice">
-            var priceContainer = htmlDocument.DocumentNode.SelectSingleNode("//div[@data-widget='webPrice']");
-            if (priceContainer != null)
-            {
-                // Находим дочерний <div>
-                var innerDiv = priceContainer.SelectSingleNode(".//div");
-                // Находим коллекцию следующих <div>
-                var divs = innerDiv.SelectNodes("./div");
-
-                if (divs[0].SelectSingleNode(".//button") != null)
-                    values.Add(ExtractDigits(divs[0].InnerText));
-                else
-                    values.Add("");
-
-                if (divs.Count > 1)
-                {
-                    var spanNodes = divs[1].SelectNodes(".//span");
-                    if (spanNodes[0] != null)
-                        values.Add(ExtractDigits(spanNodes[0].InnerText));
-                    else
-                        values.Add("");
-
-                    if (spanNodes[1] != null)
-                        values.Add(ExtractDigits(spanNodes[1].InnerText));
-                    else
-                        values.Add("");
-                }
-                else
-                {
-                    values.Add("");
-                    values.Add("");
-                }
-
-                // тут проверяем если все пустые (то есть button не нашел), то первый div
-                if (values[0] == "" && values[1] == "" && values[2] == "")
-                    values[1] = ExtractDigits(divs[0].InnerText);
-
-                return values;
-            }
-            else
+            if ( body.Contains("Такой страницы не существует") )
             {
                 flagSTATUS = -1;
-                return null;
+                return values;
             }
 
+            if ( body.Contains("Этот товар закончился") )
+            {
+                flagSTATUS = 0;
+                return values;
+            }
+
+            if ( body.Contains("data-widget=\"webPrice\"") )
+            {
+                // Находим элемент <div data-widget="webPrice">
+                var priceContainer = htmlDocument.DocumentNode.SelectSingleNode("//div[@data-widget='webPrice']");
             
+                if (priceContainer != null)
+                {
+                    string[] temp = priceContainer.InnerHtml.Split("₽</span>");
+
+                    for (var i = 0; i < temp.Length; i++)
+                        values[i] = ExtractDigits(temp[i].Substring(temp[i].LastIndexOf(">") + 1));
+
+                    if (temp[0].Contains("<button tabindex") == false)
+                    {
+                        values[2] = values[1];
+                        values[1] = values[0];
+                        values[0] = "";
+                    }
+                }    
+            }
+            
+            return values;
+
         }
 
         private void LoadArticles()
